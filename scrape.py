@@ -172,6 +172,8 @@ def main():
     parser.add_argument("--por-circuito", action="store_true", help="Recuperar datos por circuito en lugar de por mesa")
     args = parser.parse_args()
 
+    prefix = 'circuitos' if args.por_circuito else 'mesas'
+
     if not check_dns():
         print("❌ No se puede resolver el dominio. Verifica tu conexión.")
         return
@@ -192,7 +194,7 @@ def main():
             print(f"   🏙️ Localidad: {localidad}")
 
             # --- crear archivo por provincia-localidad ---
-            file_name = f"{provincia}_{localidad}.csv"
+            file_name = f"{prefix}_{provincia}_{localidad}.csv"
             file_name = file_name.replace(" ", "_").replace("/", "-")
             file_path = os.path.join(OUTPUT_DIR, file_name)
 
@@ -229,13 +231,12 @@ def main():
                                 ])
                                 mesa_count += 1
                     else:
-                        # 🧩 Modo normal: bajar todas las mesas
+                        # comportamiento normal bajando mesas
                         for mesa in mesas:
                             mesas_data = cached_request(mesa["scopeId"], LEVEL_MESA)
                             time.sleep(REQUEST_DELAY)
                             if not mesas_data:
                                 continue
-
                             for mesa_final in mesas_data:
                                 for partido in mesa_final.get("partidos", []):
                                     writer.writerow([
