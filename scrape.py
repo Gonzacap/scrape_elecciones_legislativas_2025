@@ -44,8 +44,31 @@ HEADERS = {
     'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36'
 }
 
-SCOPES = [
-    {"scopeId": "000000000000000000000906", "name": "TUCUMÁN"}
+SCOPES = SCOPES = [
+    # {"scopeId": "0000000000000000000000d2", "name": "BUENOS AIRES"},
+    # {"scopeId": "00000000000000000000006e", "name": "CABA"},
+    # {"scopeId": "000000000000000000000136", "name": "CATAMARCA"},
+    # {"scopeId": "000000000000000000000262", "name": "CHACO"},
+    # {"scopeId": "0000000000000000000002c6", "name": "CHUBUT"},
+    # {"scopeId": "0000000000000000000001fe", "name": "CORRIENTES"},
+    # {"scopeId": "00000000000000000000019a", "name": "CÓRDOBA"},
+    # {"scopeId": "00000000000000000000032a", "name": "ENTRE RÍOS"},
+    # {"scopeId": "00000000000000000000038e", "name": "FORMOSA"},
+    # {"scopeId": "0000000000000000000003f2", "name": "JUJUY"},
+    # {"scopeId": "000000000000000000000456", "name": "LA PAMPA"},
+    # {"scopeId": "0000000000000000000004ba", "name": "LA RIOJA"},
+    # {"scopeId": "00000000000000000000051e", "name": "MENDOZA"},
+    # {"scopeId": "000000000000000000000582", "name": "MISIONES"},
+    # {"scopeId": "0000000000000000000005e6", "name": "NEUQUÉN"},
+    # {"scopeId": "00000000000000000000064a", "name": "RÍO NEGRO"},
+    # {"scopeId": "0000000000000000000006ae", "name": "SALTA"},
+    # {"scopeId": "000000000000000000000712", "name": "SAN JUAN"},
+    # {"scopeId": "000000000000000000000776", "name": "SAN LUIS"},
+    # {"scopeId": "0000000000000000000007da", "name": "SANTA CRUZ"},
+    {"scopeId": "00000000000000000000083e", "name": "SANTA FE"},
+    # {"scopeId": "0000000000000000000008a2", "name": "SANTIAGO DEL ESTERO"},
+    # {"scopeId": "00000000000000000000096a", "name": "TIERRA DEL FUEGO AeIAS"},
+    # {"scopeId": "000000000000000000000906", "name": "TUCUMÁN"}
 ]
 
 # ---------------- UTILIDADES ----------------
@@ -85,8 +108,8 @@ def get_scope_data(scope_id, level):
                     "codigo": mesa_info.get("codigo"),
                     "name": mesa_info.get("name"),
                     "partidos": data.get("partidos", []),
-                    "census": mesa_info.get("census"),
-                    "pollingCensus": mesa_info.get("pollingCensus"),
+                    "census": data.get("census"),
+                    "pollingCensus": data.get("pollingCensus"),
                     "nulos": data.get("nulos"),
                     "recurridos": data.get("recurridos"),
                     "blancos": data.get("blancos"),
@@ -169,9 +192,9 @@ def main():
             with open(file_path, "w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
                 writer.writerow([
-                    "provincia", "localidad", "circuito", "mesa", "partido", "votos",
+                    "provincia", "localidad", "circuito", "mesa", "census", "pollingCensus",
                     "nulos", "recurridos", "blancos", "comando", "impugnados",
-                    "totalVotos", "afirmativos", "participacion"
+                    "totalVotos", "afirmativos", "participacion", "partido", "votos"
                 ])
 
                 circuitos_data = get_parallel(circuitos, LEVEL_CIRCUITO)
@@ -190,11 +213,13 @@ def main():
                             for partido in mesa_final.get("partidos", []):
                                 writer.writerow([
                                     provincia, localidad, circuito, mesa_final.get("name", ""),
-                                    partido.get("name", ""), partido.get("votos", 0),
+                                    mesa_final.get("census", ""),
+                                    mesa_final.get("pollingCensus", ""),
                                     mesa_final.get("nulos", ""), mesa_final.get("recurridos", ""),
                                     mesa_final.get("blancos", ""), mesa_final.get("comando", ""),
                                     mesa_final.get("impugnados", ""), mesa_final.get("totalVotos", ""),
-                                    mesa_final.get("afirmativos", ""), mesa_final.get("participation", "")
+                                    mesa_final.get("afirmativos", ""), mesa_final.get("participation", ""),
+                                    partido.get("name", ""), partido.get("votos", 0),
                                 ])
                                 mesa_count += 1
                                 circuito_mesas += 1
