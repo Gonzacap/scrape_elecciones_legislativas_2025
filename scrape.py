@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-# RUN: python3 scrape.py
+# RUN:
+#   python3 scrape.py           → recupera por mesa (completo)
+#   python3 scrape.py --por-circuito  → recupera por circuito (sin bajar mesas)
 
 import requests
 import csv
@@ -10,6 +12,7 @@ import os
 import json
 from functools import lru_cache
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import argparse
 
 # ---------------- CONFIG ----------------
 BASE_URL = "https://resultados.elecciones.gob.ar/backend-difu/scope/data/getScopeDataMap"
@@ -19,9 +22,9 @@ LEVEL_PROVINCIA = 30
 LEVEL_LOCALIDAD = 50
 LEVEL_CIRCUITO = 70
 CACHE_DIR = "cache"
-OUTPUT_DIR = "resultados"  # ### CAMBIO: directorio para guardar CSVs
+OUTPUT_DIR = "resultados"
 os.makedirs(CACHE_DIR, exist_ok=True)
-os.makedirs(OUTPUT_DIR, exist_ok=True)  # ### CAMBIO
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 REQUEST_DELAY = 0.2
 RETRIES = 2
@@ -66,7 +69,7 @@ SCOPES = SCOPES = [
     # {"scopeId": "000000000000000000000776", "name": "SAN LUIS"},
     # {"scopeId": "0000000000000000000007da", "name": "SANTA CRUZ"},
     {"scopeId": "00000000000000000000083e", "name": "SANTA FE"},
-    # {"scopeId": "0000000000000000000008a2", "name": "SANTIAGO DEL ESTERO"},
+    # {"scopeId": "0000000000000000000008a2", "name": "SANTIAGO DEL ESTERO"},.
     # {"scopeId": "00000000000000000000096a", "name": "TIERRA DEL FUEGO AeIAS"},
     # {"scopeId": "000000000000000000000906", "name": "TUCUMÁN"}
 ]
@@ -165,6 +168,10 @@ def get_parallel(scope_list, level):
 
 # ---------------- MAIN ----------------
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--por-circuito", action="store_true", help="Recuperar datos por circuito en lugar de por mesa")
+    args = parser.parse_args()
+
     if not check_dns():
         print("❌ No se puede resolver el dominio. Verifica tu conexión.")
         return
@@ -202,14 +209,13 @@ def main():
                     circuito = circuito_scope["name"]
                     print(f"      🔄 Circuito: {circuito} ({len(mesas)} mesas aprox.)")
 
-                    circuito_mesas = 0
-                    for mesa in mesas:
-                        mesas_data = cached_request(mesa["scopeId"], LEVEL_MESA)
+                    if args.por_circuito:
+                        # Tratar el circuito como si fuera LEVEL_MESA
+                        circuito_mesa_data = cached_request(circuito_scope["scopeId"], LEVEL_MESA)
                         time.sleep(REQUEST_DELAY)
-                        if not mesas_data:
+                        if not circuito_mesa_data:
                             continue
-
-                        for mesa_final in mesas_data:
+                        for mesa_final in circuito_mesa_data:
                             for partido in mesa_final.get("partidos", []):
                                 writer.writerow([
                                     provincia, localidad, circuito, mesa_final.get("name", ""),
@@ -222,13 +228,31 @@ def main():
                                     partido.get("name", ""), partido.get("votos", 0),
                                 ])
                                 mesa_count += 1
-                                circuito_mesas += 1
+                    else:
+                        # 🧩 Modo normal: bajar todas las mesas
+                        for mesa in mesas:
+                            mesas_data = cached_request(mesa["scopeId"], LEVEL_MESA)
+                            time.sleep(REQUEST_DELAY)
+                            if not mesas_data:
+                                continue
 
-                    print(f"      ✅ Circuito {circuito} completado ({circuito_mesas} mesas)")
+                            for mesa_final in mesas_data:
+                                for partido in mesa_final.get("partidos", []):
+                                    writer.writerow([
+                                        provincia, localidad, circuito, mesa_final.get("name", ""),
+                                        mesa_final.get("census", ""),
+                                        mesa_final.get("pollingCensus", ""),
+                                        mesa_final.get("nulos", ""), mesa_final.get("recurridos", ""),
+                                        mesa_final.get("blancos", ""), mesa_final.get("comando", ""),
+                                        mesa_final.get("impugnados", ""), mesa_final.get("totalVotos", ""),
+                                        mesa_final.get("afirmativos", ""), mesa_final.get("participation", ""),
+                                        partido.get("name", ""), partido.get("votos", 0),
+                                    ])
+                                    mesa_count += 1
 
             print(f"   ✅ Localidad {localidad} completada → archivo: {file_path}")
 
-    print(f"\n✅ Descarga completada. Total de mesas procesadas: {mesa_count}")
+    print(f"\n✅ Descarga completada. Total de unidades procesadas: {mesa_count}")
 
 if __name__ == "__main__":
     main()
